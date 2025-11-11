@@ -26,12 +26,18 @@ export default function HomePage() {
 			<nav className="topnav" aria-label="Primary">
 				<div className="container topnav__inner">
 					<a className="brand" href="#top">Abyss Beings</a>
-					<a href="#palette">Color Palette</a>
-					<a href="#typography">Typography</a>
-					<a href="#branding">Logo & Branding</a>
-					<a href="#graphics">Graphics &amp; Icons</a>
-					<a href="#components">Components</a>
-					<a href="#layout-mockup">Layout Mockup</a>
+					<input id="nav-toggle" className="nav-toggle" type="checkbox" aria-label="Toggle navigation" />
+					<label className="menu-btn" htmlFor="nav-toggle" aria-controls="primary-nav" aria-expanded="false">
+						<span></span><span></span><span></span>
+					</label>
+					<div id="primary-nav" className="topnav__links">
+						<a href="#palette">Color Palette</a>
+						<a href="#typography">Typography</a>
+						<a href="#branding">Logo & Branding</a>
+						<a href="#graphics">Graphics &amp; Icons</a>
+						<a href="#components">Components</a>
+						<a href="#layout-mockup">Layout Mockup</a>
+					</div>
 				</div>
 			</nav>
 
