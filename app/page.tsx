@@ -1,305 +1,312 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
+import Hotspot from './components/Hotspot';
+import { oceanZones, creatures } from './data/creatures';
+import styles from './page.module.css';
+
 export default function HomePage() {
+	// Focused zones: Midnight (bathypelagic), The Abyss (abyssopelagic), The Trenches (hadalpelagic)
+	const focusedZones = [
+		{ id: 'bathypelagic', label: 'Midnight Zone', color: '#001133' },
+		{ id: 'abyssopelagic', label: 'The Abyss', color: '#000722' },
+		{ id: 'hadalpelagic', label: 'The Trenches', color: '#000000' },
+	];
+
+	const [activeZone, setActiveZone] = useState(focusedZones[0].id);
+	const [showSidebar, setShowSidebar] = useState(false);
+	const [activeCreature, setActiveCreature] = useState(null);
+	const [openZoneDropdown, setOpenZoneDropdown] = useState(null);
+	const zoneRefs = useRef({});
+	const zoneHeaderRefs = useRef({});
+	const scrollTimeoutRef = useRef(null);
+
+	useEffect(() => {
+		// Create refs for each zone
+		focusedZones.forEach(zone => {
+			zoneRefs.current[zone.id] = document.getElementById(zone.id);
+		});
+	}, []);
+
+	const scrollToZone = (zoneId: string) => {
+		const element = document.getElementById(zoneId);
+		if (element) {
+			element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			setActiveZone(zoneId);
+		}
+	};
+
+	useEffect(() => {
+		const handleScroll = () => {
+			const scrollPosition = window.scrollY + 200;
+			const shouldShow = window.scrollY > window.innerHeight * 0.6;
+			setShowSidebar(shouldShow);
+
+			// Clear existing timeout
+			if (scrollTimeoutRef.current) {
+				clearTimeout(scrollTimeoutRef.current);
+			}
+
+			// If sidebar should be visible, show it
+			if (shouldShow) {
+				// Set timeout to hide after 4 seconds of no scrolling
+				scrollTimeoutRef.current = setTimeout(() => {
+					setShowSidebar(false);
+				}, 4000);
+			}
+
+			for (let i = focusedZones.length - 1; i >= 0; i--) {
+				const zone = focusedZones[i];
+				const element = document.getElementById(zone.id);
+				if (element && element.offsetTop <= scrollPosition) {
+					setActiveZone(zone.id);
+					break;
+				}
+			}
+		};
+
+		window.addEventListener('scroll', handleScroll);
+		return () => {
+			window.removeEventListener('scroll', handleScroll);
+			if (scrollTimeoutRef.current) {
+				clearTimeout(scrollTimeoutRef.current);
+			}
+		};
+	}, []);
+
+	const getCreatureImagePath = (zoneId: string) => {
+		const imageMap: { [key: string]: string } = {
+			'bathypelagic': '/creatures/blackDragonFish.svg',
+			'abyssopelagic': '/creatures/dumbooOctopus.svg',
+			'hadalpelagic': '/creatures/stalkedCrinoid.svg',
+		};
+		return imageMap[zoneId] || null;
+	};
+
+	const getPrimaryCreatureForZone = (zoneId: string) => {
+		if (zoneId === 'bathypelagic') {
+			const dragon = creatures.find(c => c.name.toLowerCase().includes('dragon'));
+			return dragon || { id: 'black-dragonfish', name: 'Black Dragonfish', scientificName: '', depth: '1000-3000m', adaptations: '', image: '🐉', description: 'Large placeholder for Black Dragonfish.' };
+		}
+		if (zoneId === 'abyssopelagic') {
+			const dumbo = creatures.find(c => c.name.toLowerCase().includes('dumbo'));
+			return dumbo || { id: 'dumbo-octopus', name: 'Dumbo Octopus', scientificName: '', depth: '3000-7000m', adaptations: '', image: '🐙', description: 'Large placeholder for Dumbo Octopus.' };
+		}
+		if (zoneId === 'hadalpelagic') {
+			const hadalFeature =
+				creatures.find(c => c.id === 'stalked-crinoid') ||
+				creatures.find(c => c.name.toLowerCase().includes('crinoid')) ||
+				creatures.find(c => c.zone === 'hadalpelagic');
+			return hadalFeature || { id: 'stalked-crinoid', name: 'Stalked Crinoid', scientificName: '', depth: '6500-8000m', adaptations: '', image: '🌼', description: 'Large placeholder for Stalked Crinoid.' };
+		}
+		return null;
+	};
+
+	const zoneFacts: { [key: string]: string[] } = {
+		bathypelagic: [
+			'No sunlight reaches here — perpetual darkness',
+			'Pressure can exceed 100–400 atm',
+			'Bioluminescence is common for hunting and signaling',
+			'Temperatures hover near freezing (2-4°C)',
+			'Creatures have large eyes to detect bioluminescent prey',
+			'Many species can produce their own light',
+		],
+		abyssopelagic: [
+			'Near-freezing temperatures year-round',
+			'Food is scarce; many species are scavengers',
+			'Life moves slowly to conserve energy',
+			'Pressure reaches 400-600 atmospheres',
+			'Most creatures are small and slow-moving',
+			'Detritus from above provides primary food source',
+		],
+		hadalpelagic: [
+			'Deep ocean trenches beyond 6000 m',
+			'Immense pressure > 600 atm',
+			'Species are highly specialized and rarely observed',
+			'Named after Hades, Greek god of the underworld',
+			'Only the most extreme-adapted organisms survive',
+			'Many species remain undiscovered by science',
+		],
+	};
+
+	const zoneLinks: { [key: string]: string } = {
+		bathypelagic: 'https://www.whoi.edu/ocean-learning-hub/ocean-topics/how-the-ocean-works/ocean-zones/midnight-zone/',
+		abyssopelagic: 'https://www.whoi.edu/ocean-learning-hub/ocean-topics/how-the-ocean-works/ocean-zones/abyssal-zone/',
+		hadalpelagic: 'https://education.nationalgeographic.org/resource/ocean-trench/',
+	};
+
+	const creatureLinks: { [key: string]: string } = {
+		'black-dragonfish': 'https://australian.museum/learn/animals/fishes/black-dragonfish-idiacanthus-atlanticus-brauer-1906/',
+		'dumbo-octopus': 'https://www.nhm.ac.uk/discover/what-is-a-dumbo-octopus.html',
+		'stalked-crinoid': 'https://www.usgs.gov/media/images/stalked-crinoid',
+	};
+
 	return (
-		<>
-			<a className="skip-link" href="#styleguide">Skip to content</a>
-
-			<header id="top" className="hero" aria-label="Intro hero">
-				<div className="hero__inner container">
-					<div className="hero__grid">
-						<div className="hero__copy">
-							<h1 className="hero__title">Abyss Beings</h1>
-							<h2 className="hero__subtitle">StyleSketches & Styleguide</h2>
-							<ul className="hero__meta">
-								<li>Esteban Cruz Dominguez | A01409700</li>
-								<li>MDIA 3106</li>
-							</ul>
-						</div>
-						
-						<div className="hero__logo" aria-hidden="true">
-							<img src="/logo02.svg" alt="Abyss Beings logo" style={{display: 'block', width: '100%', height: 'auto', position: 'relative', zIndex: 2}} />
-						</div>
-						
-					</div>
-				</div>
-			</header>
-
-			<nav className="topnav" aria-label="Primary">
-				<div className="container topnav__inner">
-					<a className="brand" href="#top">Abyss Beings</a>
-					<input id="nav-toggle" className="nav-toggle" type="checkbox" aria-label="Toggle navigation" />
-					<label className="menu-btn" htmlFor="nav-toggle" aria-controls="primary-nav" aria-expanded="false">
-						<span></span><span></span><span></span>
-					</label>
-					<div id="primary-nav" className="topnav__links">
-						<a href="#palette">Color Palette</a>
-						<a href="#typography">Typography</a>
-						<a href="#branding">Logo & Branding</a>
-						<a href="#graphics">Graphics &amp; Icons</a>
-						<a href="#components">Components</a>
-						<a href="#layout-mockup">Layout Mockup</a>
-					</div>
-				</div>
-			</nav>
-
-			<main>
-				<section id="palette" className="section section--styleguide" aria-label="Color Palette">
-					<div className="container">
-						<h2>Color Palette</h2>
-						<ul className="swatches">
-							<li>
-								<div className="swatch swatch--c2">
-									<div className="swatch__inner">
-										<div className="swatch__name">Primary</div>
-										<div className="swatch__hex">#2F8F90</div>
-									</div>
-								</div>
-							</li>
-							<li>
-								<div className="swatch swatch--c1">
-									<div className="swatch__inner">
-										<div className="swatch__name">Secondary</div>
-										<div className="swatch__hex">#223652</div>
-									</div>
-								</div>
-							</li>
-							<li>
-								<div className="swatch swatch--c5">
-									<div className="swatch__inner">
-										<div className="swatch__name">Accent</div>
-										<div className="swatch__hex">#3AD4C0</div>
-									</div>
-								</div>
-							</li>
-							<li>
-								<div className="swatch swatch--c3">
-									<div className="swatch__inner">
-										<div className="swatch__name">Background</div>
-										<div className="swatch__hex">#050A1A</div>
-									</div>
-								</div>
-							</li>
-							<li>
-								<div className="swatch swatch--c4">
-									<div className="swatch__inner">
-										<div className="swatch__name">Surface</div>
-										<div className="swatch__hex">#101831</div>
-									</div>
-								</div>
-							</li>
-						</ul>
-						<p>On dark backgrounds, use white text (90% body / 100% headings) for AA contrast.</p>
-					</div>
-				</section>
-
-				<section id="typography" className="section" aria-label="Typography">
-					<div className="container">
-						<h2>Typography</h2>
-						<div className="type-specimens">
-							<div className="specimen">
-								<div className="specimen__label">Display — Audiowide</div>
-								<h1 style={{fontFamily: 'Audiowide, Raleway, sans-serif', letterSpacing: '1px'}}>Abyss Beings</h1>
-							</div>
-							<div className="specimen">
-								<div className="specimen__label">H1 — 56/64 — 700</div>
-								<h1>Abyss Beings</h1>
-							</div>
-							<div className="specimen">
-								<div className="specimen__label">H2 — 40/48 — 700</div>
-								<h2>Twilight Zone</h2>
-							</div>
-							<div className="specimen">
-								<div className="specimen__label">H3 — 32/40 — 700</div>
-								<h3>Bioluminescence</h3>
-							</div>
-							<div className="specimen grid-2">
-								<div>
-									<div className="specimen__label">Body — 18/28 — 400</div>
-									<p>Life thrives where sunlight fails. Raleway body copy at 18/28 maintains ~60ch line length for readability.</p>
-								</div>
-								<div>
-									<div className="specimen__label">Caption — 14/20 — 500</div>
-									<p className="caption">Caption text for images and figures.</p>
-								</div>
-							</div>
-						</div>
-						<p className="type-notes">Sentence case; left‑aligned; hyphenation off; links use Primary with underline on hover/focus.</p>
-					</div>
-				</section>
-
-				<section id="branding" className="section" aria-label="Logo and Branding">
-					<div className="container">
-						<h2>Logo & Branding</h2>
-						<p className="caption" style={{maxWidth: 920}}>Logo explores a “portal” concept—echoing the deep sea as an other‑worldly realm. The form suggests a threshold, with bioluminescent accents hinting at creatures that look like they came from another world. Usage below shows safe variations and favicon guidance.</p>
-
-						<div className="branding-grid">
-							<div className="branding-tile"><img src="/logo.svg" alt="Primary logo" /></div>
-							<div className="branding-tile branding-tile--glow"><img src="/logo.svg" alt="Logo with portal glow" /></div>
-							<div className="branding-tile branding-tile--mono"><img src="/logo.svg" alt="Monochrome logo" /></div>
-						</div>
-
-						<h3 style={{marginTop: 'var(--space-5)'}}>Favicon Variations</h3>
-						<p className="caption">Maintain clear space around the mark. Examples show minimum margins at 3px, 5px, and 7px scales.</p>
-						<div className="favicon-grid">
-							<div className="favcap">3px
-								<div className="favicon-box favicon-box--s"><img src="/logo.svg" alt="Favicon 3px margin" /></div>
-							</div>
-							<div className="favcap">5px
-								<div className="favicon-box favicon-box--m"><img src="/logo.svg" alt="Favicon 5px margin" /></div>
-							</div>
-							<div className="favcap">7px
-								<div className="favicon-box favicon-box--l"><img src="/logo.svg" alt="Favicon 7px margin" /></div>
-							</div>
-						</div>
-					</div>
-				</section>
-
-				<section id="graphics" className="section" aria-label="Graphics and Icons">
-					<div className="container">
-						<h2>Graphics &amp; Icons</h2>
-						<p className="caption">This will be the inspiration style when drawing creatures for each zone.</p>
-						<div className="link-cards">
-							<a className="link-card" href="https://ca.pinterest.com/pin/13370130138930594/" target="_blank" rel="noreferrer">
-								<div className="link-card__media">
-									{/* Direct preview image */}
-									<img src="https://i.pinimg.com/736x/63/60/7b/63607b933a9bd6dc12fe8940c346135f.jpg" alt="Anglerfish inspiration" loading="lazy" />
-								</div>
-							</a>
-							<a className="link-card" href="https://ca.pinterest.com/pin/3025924741423160/" target="_blank" rel="noreferrer">
-								<div className="link-card__media">
-									<img src="https://i.pinimg.com/1200x/15/f5/97/15f5978895b3026dbd8f594634d5369e.jpg" alt="Crab illustration inspiration" loading="lazy" />
-								</div>
-							</a>
-						</div>
-						<p className="caption">Sources: Pinterest references for anglerfish and crab styles.</p>
-						
-						<h3 style={{marginTop: 'var(--space-6)', marginBottom: 'var(--space-3)'}}>Concept Art</h3>
-						<p className="caption">Some of my past work that I may grab inspiration from for this project.</p>
-						<div className="link-cards">
-							<div className="link-card">
-								<div className="link-card__media">
-									<img 
-										src="/concept_art/inspo01.png" 
-										alt="Concept art - past work 1" 
-										loading="lazy"
-									/>
-								</div>
-								<p className="caption link-card__caption">Note: The colors are my work, the actual drawing isn't. Inspiration for colors.</p>
-							</div>
-							<div className="link-card">
-								<div className="link-card__media">
-									<img 
-										src="/concept_art/inspo02.png" 
-										alt="Concept art - past work 2" 
-										loading="lazy"
-									/>
-								</div>
-							</div>
-						</div>
-						<div style={{display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', marginTop: 'var(--space-5)', justifyContent: 'center', alignItems: 'center'}}>
-							<img 
-								src="/concept_art/conceptar.svg" 
-								alt="Concept art" 
-								loading="lazy"
-								style={{maxWidth: '100%', height: 'auto'}}
-							/>
-						</div>
-					</div>
-				</section>
-
-				<section id="components" className="section" aria-label="Components">
-					<div className="container">
-						<h2>Components</h2>
-						<p className="caption">Sample UI elements built to match the styleguide (subject to change depending on how much text is incorporated into the page). Taken from the content inventory for “Midnight”, “Abyss”, and “Trenches”.</p>
-						<div className="comp-actions">
-							<a className="btn btn--secondary" href="https://docs.google.com/spreadsheets/d/1px0RplAUhfBSmWgJ1ge6WBp1uBgRLSjt/edit?gid=345914785#gid=345914785" target="_blank" rel="noreferrer">Content Inventory</a>
-						</div>
-
-						<div className="components-grid">
-							<div className="comp-card">
-								<div className="comp-title">Buttons</div>
-								<div className="comp-row">
-									<button className="btn btn--midnight">Midnight</button>
-									<button className="btn btn--abyss">The Abyss</button>
-									<button className="btn btn--trenches">The Trenches</button>
-								</div>
-								<p className="caption">Hover: subtle lift + glow; Focus: accent outline; Active: slight press.</p>
-							</div>
-
-							<div className="comp-card">
-								<div className="comp-title">Sidebar (Preview)</div>
-								<div className="sidebar-preview">
-									<a href="#midnight">Midnight</a>
-									<a href="#abyss">The Abyss</a>
-									<a href="#trenches">The Trenches</a>
-								</div>
-								<p className="caption">Slides in on scroll; fixed left on wide screens.</p>
-							</div>
-
-							<div className="comp-card">
-								<div className="comp-title">Zone Card</div>
-								<div className="zone-card">
-									<div className="zone-card__bar zone-card__bar--midnight" aria-hidden="true"></div>
-									<div>
-										<div className="zone-card__title">Midnight Zone</div>
-										<div className="zone-card__meta">1000–4000 m • Bathypelagic</div>
-										<p className="zone-card__desc">Where sunlight fails and bioluminescence thrives.</p>
-									</div>
-								</div>
-								<div className="zone-card">
-									<div className="zone-card__bar zone-card__bar--abyss" aria-hidden="true"></div>
-									<div>
-										<div className="zone-card__title">The Abyss</div>
-										<div className="zone-card__meta">4000–6000 m • Abyssopelagic</div>
-										<p className="zone-card__desc">Sparse light, pressure high, life adapts in remarkable ways.</p>
-									</div>
-								</div>
-								<div className="zone-card">
-									<div className="zone-card__bar zone-card__bar--trenches" aria-hidden="true"></div>
-									<div>
-										<div className="zone-card__title">The Trenches</div>
-										<div className="zone-card__meta">6000 m+ • Hadalpelagic</div>
-										<p className="zone-card__desc">Extreme depth; the frontier of deep‑sea exploration.</p>
-									</div>
-								</div>
-							</div>
-
-							<div className="comp-card">
-								<div className="comp-title">Hotspot Pin + Tooltip</div>
-								<div className="hotspot-demo">
-									<button className="hotspot" aria-describedby="tip-1"></button>
-									<div className="tooltip" role="tooltip" id="tip-1">Bioluminescent lure attracts prey.</div>
-								</div>
-								<p className="caption">Pins pulse; tooltip appears on hover/focus.</p>
-							</div>
-						</div>
-					</div>
-				</section>
-
-				<section id="layout-mockup" className="section" aria-label="Layout Mockup">
-					<div className="container">
-						<h2>Layout Mockup</h2>
-						<p className="caption">Interactive prototype showcasing the main screen layouts and user interface design.</p>
-						<div style={{marginTop: 'var(--space-4)'}}>
-							<a 
-								href="https://www.figma.com/proto/5ad5czF4I44WMwM1egnVvn/CP-03_Storyboard_EstebanCruzDominguez?node-id=3-92&p=f&m=draw&scaling=min-zoom&content-scaling=fixed&page-id=0%3A1&starting-point-node-id=3%3A92&show-proto-sidebar=1&t=Q8c3yh8wdn8hVkIZ-1" 
-								target="_blank" 
-								rel="noreferrer"
-								className="btn btn--primary"
+		<div className={styles.container}>
+			<div className={styles.mainLayout}>
+				{/* Left Sidebar Navigation */}
+				<aside className={`${styles.sidebar} ${showSidebar ? '' : styles.sidebarHidden}`}>
+					<nav className={styles.zoneNav}>
+						{focusedZones.map((zone) => (
+							<button
+								key={zone.id}
+								className={`${styles.zoneNavButton} ${activeZone === zone.id ? styles.active : ''}`}
+								onClick={() => scrollToZone(zone.id)}
+								style={{ 
+									borderLeftColor: zone.color,
+									color: activeZone === zone.id ? zone.color : '#b0e0ff'
+								}}
+								title={zone.label}
 							>
-								View Figma Prototype
-							</a>
-						</div>
-					</div>
-				</section>
-			</main>
+								<span className={styles.zoneNavName}>{zone.label}</span>
+							</button>
+						))}
+					</nav>
+				</aside>
 
-			<footer id="footer" className="footer">
-				<div className="container footer__inner">
-					<p>Abyss Beings — Esteban Cruz Dominguez</p>
-				</div>
-			</footer>
-		</>
+				{/* Main Scrollable Content */}
+				<main className={`${styles.mainContent} ${showSidebar ? '' : styles.mainContentFull}`}>
+					{/* Hero Section */}
+					<section className={styles.hero}>
+						<h1 className={styles.heroTitle}>
+							<span className={styles.titleMain}>Abyss Beings</span>
+							<span className={styles.titleSub}>Explore the Depths</span>
+						</h1>
+						<p className={styles.heroDescription}>
+							Journey into the mysterious world of the deep sea, where bizarre creatures
+							thrive in complete darkness under crushing pressure. Discover the ocean's
+							strangest and most exotic lifeforms that have adapted to survive in the
+							most extreme environments on Earth.
+						</p>
+					</section>
+
+					{/* Zone Sections */}
+					{focusedZones.map((zone, zoneIndex) => {
+						const baseZone = oceanZones.find(z => z.id === zone.id);
+						const primary = getPrimaryCreatureForZone(zone.id);
+						const darkness = Math.min(0.3 + zoneIndex * 0.25, 0.85);
+						return (
+							<section
+								key={zone.id}
+								id={zone.id}
+								className={styles.zoneSection}
+								style={{ 
+									borderTopColor: zone.color,
+									background: `linear-gradient(180deg, rgba(0,0,0,${darkness}) 0%, transparent 100%)`
+								}}
+							>
+								{/* Hotspots that roam the entire zone */}
+								<div className={styles.zoneHotspotsContainer}>
+									{(zoneFacts[zone.id] || []).map((fact, i) => {
+										const positions = [
+											[15, 20], [75, 25], [45, 40], [85, 55], [25, 65], [65, 80]
+										];
+										const pos = positions[i] || [50, 50];
+										return (
+											<Hotspot
+												key={i}
+												x={pos[0]}
+												y={pos[1]}
+												info={fact}
+												delay={i * 0.3}
+											/>
+										);
+									})}
+								</div>
+								
+								<div className={styles.zoneGrid}>
+									{/* Left: Zone info */}
+									<div className={styles.zoneLeft}>
+										<div 
+											className={styles.zoneHeaderContainer}
+											ref={(el) => { if (el) zoneHeaderRefs.current[zone.id] = el; }}
+											onMouseEnter={() => setOpenZoneDropdown(zone.id)}
+										>
+											<div className={styles.zoneHeader}>
+												<div 
+													className={styles.zoneIndicator}
+													style={{ background: zone.color }}
+												/>
+												<h2 className={styles.zoneTitle}>{zone.label}</h2>
+												<div className={styles.zoneMeta}>
+													<span className={styles.zoneDepth}>{baseZone?.depth}</span>
+												</div>
+											</div>
+											<div className={`${styles.zoneDescriptionDropdown} ${openZoneDropdown === zone.id ? styles.visible : ''}`}>
+												<p className={styles.zoneDescription}>{baseZone?.description}</p>
+												<a 
+													href={zoneLinks[zone.id]} 
+													target="_blank" 
+													rel="noopener noreferrer"
+													className={styles.learnMoreButton}
+													onClick={(e) => e.stopPropagation()}
+												>
+													Learn More →
+												</a>
+											</div>
+										</div>
+										<div className={styles.zoneVisual}>
+											<div 
+												className={styles.zoneBackground}
+												style={{ background: zone.color }}
+											/>
+										</div>
+									</div>
+
+									{/* Right: Single Large Creature SVG */}
+									<div className={styles.zoneRight}>
+										{primary && (
+											<div 
+												className={`${styles.featuredCreature} ${activeCreature === zone.id ? styles.active : ''}`}
+												onMouseEnter={() => setActiveCreature(zone.id)}
+												onMouseLeave={() => setActiveCreature(null)}
+												onClick={() => setActiveCreature(activeCreature === zone.id ? null : zone.id)}
+											>
+												<div className={styles.featuredIcon}>
+													<Image
+														src={getCreatureImagePath(zone.id) || ''}
+														alt={primary.name}
+														width={600}
+														height={600}
+														style={{ width: '100%', height: 'auto', objectFit: 'contain' }}
+														priority
+													/>
+												</div>
+												<div className={styles.featuredInfo}>
+													<h3 className={styles.featuredName}>
+														{primary.name}
+													</h3>
+													<p className={styles.featuredMeta}>{primary.scientificName || '—'}</p>
+													<p className={styles.featuredDepth}>Depth: {primary.depth}</p>
+													<p className={styles.featuredDescription}>{primary.description || 'Large placeholder graphic area — custom illustration to be added.'}</p>
+													{creatureLinks[primary.id] && (
+														<a 
+															href={creatureLinks[primary.id]} 
+															target="_blank" 
+															rel="noopener noreferrer"
+															className={styles.learnMoreButton}
+															onClick={(e) => e.stopPropagation()}
+														>
+															Learn More →
+														</a>
+													)}
+												</div>
+											</div>
+										)}
+									</div>
+								</div>
+							</section>
+						);
+					})}
+
+					{/* Footer */}
+					<footer className={styles.footer}>
+						<p>Abyss Beings - Interactive Deep Sea Exploration</p>
+						<p className={styles.footerCredit}>Made by Esteban Cruz Dominguez | A01409700</p>
+					</footer>
+				</main>
+			</div>
+		</div>
 	);
 }
-
-
